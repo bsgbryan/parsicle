@@ -1,5 +1,7 @@
-pub fn sources() -> [&'static str; 242] {
-  [
+pub mod nlp;
+pub mod parse;
+
+pub const SOURCES: [&'static str; 242] = [
     "www.huffingtonpost.com",
     "cnn.com",
     "www.time.com",
@@ -242,5 +244,4 @@ pub fn sources() -> [&'static str; 242] {
     "washingtonindependent.com",
     "drudgereport.com",
     "beta.na.leagueoflegends.com]",
-  ]
-}
+];
