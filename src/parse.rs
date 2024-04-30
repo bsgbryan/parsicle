@@ -1,109 +1,237 @@
 use article_scraper::ArticleScraper;
-use html2md::parse_html;
-use url::Url;
-use reqwest::Client;
-use comrak::{parse_document, Arena, Options};
 use comrak::nodes::{AstNode, NodeValue};
+use comrak::{parse_document, Arena, Options};
+use html2md::parse_html;
+use reqwest::Client;
+use std::cell::{RefCell, RefMut};
+use std::error::Error;
+use url::Url;
 
 extern crate comrak;
 
 #[derive(Debug)]
 pub struct ParsedArticle {
-    pub title: String,
-    pub content: Vec<String>,
-    // published: Option<String>,
-    // author: Option<String>,
+    pub content: Vec<Section>,
+    pub images: Vec<String>,
     pub links: Vec<String>,
+    pub title: String,
 }
 
-pub async fn parse(url: &str) -> Result<ParsedArticle, Box<dyn std::error::Error>> {
-  // let src = sources();
+#[derive(Debug, Clone)]
+struct Paragraph {
+    tokens: Vec<String>,
+}
 
-  let scraper = ArticleScraper::new(None);
-  let url = Url::parse(url);
-  let client = Client::new();
-  let article = scraper.await.parse(&url.unwrap(), false, &client, None).await.unwrap();
-  let md = parse_html(article.html.unwrap().as_str());
-  
-  let arena = Arena::new();
+impl Paragraph {
+    fn new(text: &str) -> Self {
+        Paragraph {
+            tokens: vec![text.to_string()],
+        }
+    }
+}
 
-  let root = parse_document(
-      &arena,
-      &md,
-      &Options::default(),
-  );
+#[derive(Debug, Clone)]
+pub struct Section {
+    pub content: Vec<String>,
+    pub heading: String,
+    paragraphs: Vec<RefCell<Paragraph>>,
+}
 
-  fn iter_nodes<'a, F>(ignor: &mut bool, bf: &mut Vec<String>, tok: &mut Vec<String>, lnks: &mut Vec<String>, node: &'a AstNode<'a>, f: &F)
-      where F : Fn(&mut bool, &mut Vec<String>, &mut Vec<String>, &mut Vec<String>, &'a AstNode<'a>) {
-      f(ignor, bf, tok, lnks, node);
-      for c in node.children() {
-          iter_nodes(ignor, bf, tok, lnks, c, f);
-      }
-  }
+impl Section {
+    fn new(text: &str) -> Self {
+        Section {
+            content: vec![],
+            heading: text.to_string(),
+            paragraphs: vec![RefCell::new(Paragraph {
+                tokens: vec![],
+            })],
+        }
+    }
+}
 
-  let mut buf = vec![];
-  let mut paragraphs = vec![];
-  let mut links = vec![];
-  let mut ignore = false;
+#[derive(Debug)]
+struct Content {
+    new_heading: bool,
+    ignore: bool,
+    new_paragraph: bool,
+    images: Vec<String>,
+    links: Vec<String>,
+    sections: Vec<RefCell<Section>>,
+}
 
-  iter_nodes(&mut ignore, &mut buf, &mut paragraphs, &mut links, root, &|ignore, buf, tokens, links, node| {
-      match node.data.borrow().value {
-          NodeValue::Paragraph => {
-              for c in node.children() {
-                  match c.data.borrow().value {
-                      NodeValue::Text(ref text) => {
-                          if text.to_lowercase().starts_with("read more") {
-                              *ignore = true;
-                          } else {
-                              // println!("TEXT:\"{}\"", text.trim());
+impl Content {
+    fn new() -> Self {
+        Content {
+            new_heading: false,
+            ignore: false,
+            images: vec![],
+            new_paragraph: false,
+            links: vec![],
+            sections: vec![RefCell::new(Section {
+                content: vec![],
+                heading: String::new(),
+                paragraphs: vec![RefCell::new(Paragraph {
+                    tokens: vec![],
+                })],
+            })],
+        }
+    }
+}
 
-                              buf.push(text.trim().to_string());
-              
-                              if text.ends_with(".") {
-                                  tokens.push(buf.concat());
-                                  buf.clear();
-                              }
-                          }
-                      }
-                      NodeValue::Link(ref link) => {
-                          if *ignore == false {
-                              links.push(link.url.clone());
+fn iter_nodes<'a, F>(content: &mut Content, node: &'a AstNode<'a>, f: &F)
+where
+    F: Fn(&mut Content, &'a AstNode<'a>),
+{
+    f(content, node);
 
-                              for c in c.children() {
-                                  match c.data.borrow().value {
-                                      NodeValue::Text(ref text) => {
-                                          // println!("BUF:\"{}\"", text);
-          
-                                          if text.len() > 0 {
-                                              buf.push(text.trim().to_string());
-          
-                                              if text.ends_with(".") {
-                                                  tokens.push(buf.concat());
-                                                  buf.clear();
-                                              }
-                                          }
-                                      }
-                                      _ => ()
-                                  }
-                              }
-                          } else {
-                              *ignore = false;
-                          }
-                      }
-                      _ => ()
-                  }
-              }
-          }
-          NodeValue::Heading(_) => (),
-          _ => (),
-      }
-  });
+    for c in node.children() {
+        iter_nodes(content, c, f);
+    }
+}
 
-  Ok(ParsedArticle {
-      title: article.title.unwrap(),
-      content: paragraphs,
-      // published: None,
-      // author: article.author,
-      links,
-  })
+fn append_text(content: &mut Content, text: &str) {
+    let mut section = content.
+        sections.
+        last().
+        unwrap().
+        borrow_mut();
+
+    let paras: &mut Vec<RefCell<Paragraph>> = section.
+        paragraphs.
+        as_mut();
+
+    if text.to_lowercase().starts_with("read more") {
+        content.ignore = true;
+    } else {
+        paras.
+            last().
+            unwrap().
+            borrow_mut().
+            tokens.
+            push(text.to_string());
+    }
+}
+
+fn finish(section: &mut RefMut<Section>) {
+    section.content = section.
+        paragraphs.
+        iter().
+        map(|p| p.
+            borrow().
+            tokens.
+            concat()
+        ).
+        filter(|c| c.len() > 0).
+        collect();
+
+    section.paragraphs.clear();
+}
+
+fn create_new_section(content: &mut Content, text: &str) {
+    content.sections.push(RefCell::new(Section::new(text)));
+
+    content.new_heading = false;
+
+    finish(&mut content.
+        sections.
+        get(content.sections.len() - 2).
+        unwrap().
+        borrow_mut()
+    );
+}
+
+fn create_new_paragraph(content: &mut Content, text: &str) {
+    content.
+        sections.
+        last().
+        unwrap().
+        borrow_mut().
+        paragraphs.
+        push(RefCell::new(Paragraph::new(text))
+    );
+
+    content.new_paragraph = false;
+}
+
+async fn fetch_and_parse(url: &str) -> Result<(String, String), Box<dyn Error>> {
+    let scraper = ArticleScraper::new(None);
+    let url = Url::parse(url);
+    let client = Client::new();
+    let article = scraper.
+        await.
+        parse(&url.unwrap(), false, &client, None).
+        await.
+        unwrap();
+
+    Ok((article.title.unwrap(), parse_html(article.html.unwrap().as_str())))
+}
+
+pub async fn parse<'a>(url: &str) -> Result<ParsedArticle, Box<dyn std::error::Error>> {
+    let (title, md) = fetch_and_parse(url).await.ok().unwrap();
+    let arena = Arena::new();
+    let root = parse_document(&arena, &md, &Options::default());
+
+    let mut content = Content::new();
+
+    iter_nodes(
+        &mut content,
+        root,
+        &|
+            content,
+            node,
+        | match &node.data.borrow().value {
+            NodeValue::Image(img) => {
+                content.images.push(img.url.clone());
+            }
+            NodeValue::Heading(_) => {
+                content.new_heading = true;
+            }
+            NodeValue::Text(ref text) => {
+                if content.new_heading {
+                    create_new_section(content, text);
+                } else {
+                    if content.new_paragraph {
+                        create_new_paragraph(content, &text);
+                    } else {
+                        append_text(content, text);
+                    }
+                }
+            }
+            // NodeValue::List(_) => {
+            //     println!("Outside a paragraph, got a list!");
+            // }
+            NodeValue::Link(ref link) => {
+                if content.ignore == false {
+                    content.links.push(link.url.clone());
+                } else {
+                    content.ignore = false;
+                }
+            }
+            NodeValue::Paragraph => {
+                content.new_paragraph = true;
+            }
+            _ => (),
+        },
+    );
+
+    finish(&mut content.
+        sections.
+        last().
+        unwrap().
+        borrow_mut()
+    );
+
+    Ok(ParsedArticle {
+        content: content.
+            sections.
+            iter().
+            map(|s: &RefCell<Section>| s.
+                borrow().
+                clone()
+            ).
+            collect(),
+        images: content.images,
+        links: content.links,
+        title,
+    })
 }
