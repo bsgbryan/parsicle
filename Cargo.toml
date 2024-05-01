@@ -1,7 +1,11 @@
 [package]
+authors = ["Bryan Maynard <bsgbryan@gmail.com>"]
 name = "parsicle"
 version = "0.1.0"
 edition = "2021"
+description = "A little tool for parsing articles from the web and extracting useful data from them"
+license = "MIT"
+license-file = "LICENSE"
 
 [dependencies]
 article_scraper = "2.1.0"
