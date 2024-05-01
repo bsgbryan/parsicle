@@ -1,4 +1,4 @@
-use readie_motherbrain::parse::parse;
+use parsicle::parse::parse;
 
 #[tokio::main]
 async fn main() {

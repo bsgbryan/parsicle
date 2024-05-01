@@ -1,11 +1,11 @@
 [package]
-name = "readie_motherbrain"
+name = "parsicle"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 article_scraper = "2.1.0"
-comrak = "0.22.0"
+comrak = "0.23.0"
 html2md = "0.2.14"
 reqwest = "0.12.4"
 rust-bert = { version = "0.22.0", features = ["download-libtorch"] }
