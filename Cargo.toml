@@ -6,6 +6,7 @@ edition = "2021"
 description = "A little tool for parsing articles from the web and extracting useful data from them"
 license = "MIT"
 license-file = "LICENSE"
+repository = "https://github.com/bsgbryan/parsicle"
 
 [dependencies]
 article_scraper = "2.1.0"
