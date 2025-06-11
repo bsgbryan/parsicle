@@ -7,113 +7,14 @@ use std::cell::{RefCell, RefMut};
 use std::error::Error;
 use url::Url;
 
+use crate::content::{Content, Mode};
+use crate::image::Image;
+use crate::list::List;
+use crate::paragraph::Paragraph;
+use crate::parsed_article::ParsedArticle;
+use crate::section::Section;
+
 extern crate comrak;
-
-#[derive(Debug)]
-pub struct ParsedArticle {
-    pub content: Vec<Section>,
-    pub images: Vec<Image>,
-    pub links: Vec<String>,
-    pub lists: Vec<List>,
-    pub title: String,
-}
-
-#[derive(Debug, Clone)]
-struct Paragraph {
-    tokens: Vec<String>,
-}
-
-impl Paragraph {
-    fn new(text: &str) -> Self {
-        Paragraph {
-            tokens: vec![text.to_string()],
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Image {
-    caption: Option<String>,
-    title: Option<String>,
-    url: String,
-}
-
-impl Image {
-    fn new(url: String) -> Self {
-        Image {
-            caption: None,
-            title: None,
-            url,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct List {
-    items: Vec<String>,
-}
-
-impl List {
-    fn new() -> Self {
-        List {
-            items: vec![],
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Section {
-    pub content: Vec<String>,
-    pub heading: String,
-    paragraphs: Vec<RefCell<Paragraph>>,
-}
-
-impl Section {
-    fn new(text: &str) -> Self {
-        Section {
-            content: vec![],
-            heading: text.to_string(),
-            paragraphs: vec![RefCell::new(Paragraph {
-                tokens: vec![],
-            })],
-        }
-    }
-}
-
-#[derive(Debug)]
-struct Content {
-    ignore: bool,
-    new_heading: bool,
-    new_image: bool,
-    new_list_item: bool,
-    new_paragraph: bool,
-    images: Vec<RefCell<Image>>,
-    links: Vec<String>,
-    lists: Vec<RefCell<List>>,
-    sections: Vec<RefCell<Section>>,
-}
-
-impl Content {
-    fn new() -> Self {
-        Content {
-            ignore: false,
-            images: vec![],
-            new_heading: false,
-            new_image: false,
-            new_paragraph: false,
-            new_list_item: false,
-            links: vec![],
-            lists: vec![],
-            sections: vec![RefCell::new(Section {
-                content: vec![],
-                heading: String::new(),
-                paragraphs: vec![RefCell::new(Paragraph {
-                    tokens: vec![],
-                })],
-            })],
-        }
-    }
-}
 
 fn iter_nodes<'a, F>(content: &mut Content, node: &'a AstNode<'a>, f: &F)
 where
@@ -174,8 +75,6 @@ fn finish(section: &mut RefMut<Section>) {
 fn create_new_section(content: &mut Content, text: &str) {
     content.sections.push(RefCell::new(Section::new(text)));
 
-    content.new_heading = false;
-
     finish(&mut content.
         sections.
         get(content.sections.len() - 2).
@@ -195,8 +94,6 @@ fn create_new_paragraph(content: &mut Content, text: &str) {
             push(RefCell::new(Paragraph::new(text))
         );
     }
-
-    content.new_paragraph = false;
 }
 
 async fn fetch_and_parse(url: &str) -> Result<(String, String), Box<dyn Error>> {
@@ -233,70 +130,95 @@ pub async fn parse<'a>(url: &str) -> Result<ParsedArticle, Box<dyn std::error::E
             NodeValue::Image(img) => {
                 // println!("IMAGE: {} -> {}", img.title, img.url);
                 content.images.push(RefCell::new(Image::new(img.url.clone())));
-                content.new_image = true;
-                content.new_paragraph = false;
+                content.mode = Mode::Image;
+                // content.new_paragraph = false;
             }
             NodeValue::Heading(_) => {
                 // println!("HEADING");
-                content.new_heading = true;
+                content.mode = Mode::Heading;
             }
-            NodeValue::Text(ref text) => {
-                // println!("TEXT: {}", text);
-                if content.new_heading {
-                    create_new_section(content, text);
-                } else {
-                    if content.new_paragraph {
-                        if content.new_image {
-                            let mut image = content.
-                                images.
-                                last().
-                                unwrap().
-                                borrow_mut();
+            NodeValue::Text(text) => {
+              match content.mode {
+                Mode::Heading => { create_new_section(content, text); }
+                Mode::Image => {
+                  let mut image = content.
+                    images.
+                    last().
+                    unwrap().
+                    borrow_mut();
 
-                            image.caption = Some(text.to_string());
-
-                            content.new_image = false;
-                        } else if content.new_list_item {
-                            let mut list = content.
-                                lists.
-                                last().
-                                unwrap().
-                                borrow_mut();
-
-                            list.items.push(text.to_string());
-
-                            content.new_list_item = false;
-                        } else {
-                            create_new_paragraph(content, &text);
-                        }
-                    } else {
-                        if content.new_image {
-                            let mut image = content.
-                                images.
-                                last().
-                                unwrap().
-                                borrow_mut();
-
-                            image.title = Some(text.to_string());
-                        } else {
-                            append_text(content, text);
-                        }
-                    }
+                  image.caption = Some(text.to_string());
                 }
+                Mode::ListItem => {
+                  let mut list = content.
+                    lists.
+                    last().
+                    unwrap().
+                    borrow_mut();
+
+                  list.items.push(text.to_string());
+                }
+                Mode::Paragraph => { create_new_paragraph(content, &text); }
+                Mode::Unknown => ()
+              }
+
+              content.mode = Mode::Unknown;
+                // println!("TEXT: {}", text);
+                // if content.new_heading {
+                //     // create_new_section(content, text);
+                // } else {
+                    // if content.new_paragraph {
+                    //     if content.new_image {
+                    //         // let mut image = content.
+                    //         //     images.
+                    //         //     last().
+                    //         //     unwrap().
+                    //         //     borrow_mut();
+
+                    //         // image.caption = Some(text.to_string());
+
+                    //         // content.mode = Mode::Unknown;
+                    //     } else if content.new_list_item {
+                    //         // let mut list = content.
+                    //         //     lists.
+                    //         //     last().
+                    //         //     unwrap().
+                    //         //     borrow_mut();
+
+                    //         // list.items.push(text.to_string());
+
+                    //         // content.mode = Mode::Unknown;
+                    //     } else {
+                    //         // create_new_paragraph(content, &text);
+                    //     }
+                    // } else {
+                    //     if content.new_image {
+                    //         let mut image = content.
+                    //             images.
+                    //             last().
+                    //             unwrap().
+                    //             borrow_mut();
+
+                    //         image.title = Some(text.to_string());
+                    //     } else {
+                    //         append_text(content, text);
+                    //     }
+                    // }
+                // }
             }
             NodeValue::List(_) => {
-                content.new_image = false;
+                content.mode = Mode::Image;
 
                 content.lists.push(RefCell::new(List::new()));
 
                 // println!("LIST");
             }
-            NodeValue::Item(item) => {
+            NodeValue::Item(_item) => {
                 // println!("ITEM: {:#?}", item.list_type);
 
-                content.new_list_item = true;
+                content.mode = Mode::ListItem;
             }
-            NodeValue::Link(ref link) => {
+            NodeValue::Link(link) => {
                 if content.ignore == false {
                     content.links.push(link.url.clone());
                 } else {
@@ -305,7 +227,7 @@ pub async fn parse<'a>(url: &str) -> Result<ParsedArticle, Box<dyn std::error::E
             }
             NodeValue::Paragraph => {
                 // println!("PARAGRAPH");
-                content.new_paragraph = true;
+                content.mode = Mode::Paragraph;
             }
             _ => (),
         },

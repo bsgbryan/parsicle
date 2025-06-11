@@ -2,17 +2,17 @@
 authors = ["Bryan Maynard <bsgbryan@gmail.com>"]
 name = "parsicle"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 description = "A little tool for parsing articles from the web and extracting useful data from them"
 license = "MIT"
 license-file = "LICENSE"
 
 [dependencies]
-article_scraper = "2.1.0"
-comrak = "0.23.0"
-html2md = "0.2.14"
-reqwest = "0.12.4"
-rust-bert = { version = "0.22.0", features = ["download-libtorch"] }
-scraper = "0.19.0"
-tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread"] }
-url = "2.5.0"
+article_scraper = "2.1.2"
+comrak = "0.39.0"
+html2md = "0.2.15"
+reqwest = "0.12.20"
+rust-bert = { version = "0.23.0", features = ["download-libtorch"] }
+scraper = "0.23.1"
+tokio = { version = "1.45.1", features = ["macros", "rt-multi-thread"] }
+url = "2.5.4"
