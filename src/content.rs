@@ -1,4 +1,7 @@
-use std::fmt::Display;
+use std::{
+  fmt::Display,
+  ops::Range,
+};
 
 use url::Url;
 
@@ -113,13 +116,12 @@ impl Content {
     }
   }
 
-  pub fn add_credit(&mut self, name: &str) {
-    if let Some(img) = self.images.last_mut() {
-      let length = name.len();
-      if let Some(credit) = name.get(9..length - 2) {
-        img.credit = Some(credit.to_string());
-        self.mode = Mode::Paragraph;
-      }
+  pub fn add_credit(&mut self, name: &str, range: Range<usize>) {
+    if let Some(img) = self.images.last_mut() &&
+       let Some(credit) = name.get(range)
+    {
+      img.credit = Some(credit.to_string());
+      self.mode = Mode::Paragraph;
     }
   }
 

@@ -39,9 +39,9 @@ pub fn iterate(
   match &node.data.borrow().value {
     NodeValue::Heading(_) => content.set(Mode::Heading),
     NodeValue::Paragraph  => {
-      if !content.is_in(Mode::ImageCredit) {
-        content.set(Mode::Paragraph)
-      }
+      if !content.is_in(Mode::ImageCredit) &&
+         !content.is_in(Mode::Image)
+      { content.set(Mode::Paragraph) }
     }
     NodeValue::Link (l)   => content.add_link (&l.url),
     NodeValue::Image(i)   => content.add_image(&i.url),
@@ -49,16 +49,16 @@ pub fn iterate(
       match content.mode() {
         Mode::Heading     => content.add_section  (t),
         Mode::Image       => content.add_caption  (t),
-        Mode::ImageCredit => {
-          if t.starts_with("(Credit: ") {
-            let length = t.len();
-            content.add_credit(t, 9..length - 2);
-          }
-          else { content.add_paragraph(t) }
-        }
-        Mode::Paragraph => content.add_paragraph(t),
-        Mode::Text      => content.add_text     (t),
+        Mode::ImageCredit => content.add_credit   (t, 0..t.len()),
+        Mode::Paragraph   => content.add_paragraph(t),
+        Mode::Text        => content.add_text     (t),
       }
+    }
+    NodeValue::HtmlBlock(h) => {
+      if let Some(start) = h.literal.find(" src=\"") &&
+         let Some(end)   = h.literal.find("\">")     &&
+         let Some(url)   = h.literal.get(start + 6..end)
+      { content.add_image(&url) }
     }
     _ => (),
   }

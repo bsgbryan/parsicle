@@ -1,4 +1,5 @@
 #![feature(let_chains)]
+#![feature(new_range_api)]
 
 pub mod content;
 pub mod fetch;
