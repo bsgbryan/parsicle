@@ -19,29 +19,29 @@ pub enum Mode {
 impl Display for Mode {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
-      Self::Heading     => write!(f, "Heading"),
-      Self::Image       => write!(f, "Image"),
+      Self::Heading     => write!(f, "Heading"    ),
+      Self::Image       => write!(f, "Image"      ),
       Self::ImageCredit => write!(f, "ImageCredit"),
-      Self::Paragraph   => write!(f, "Paragraph"),
-      Self::Text        => write!(f, "Text"),
+      Self::Paragraph   => write!(f, "Paragraph"  ),
+      Self::Text        => write!(f, "Text"       ),
     }
   }
 }
 
 pub struct Content {
-        mode: Mode,
-    pub images:   Vec<Image>,
-    pub links:    Vec<Url>,
-    pub sections: Vec<Section>,
+  pub images:   Vec<Image>,
+  pub links:    Vec<Url>,
+  pub sections: Vec<Section>,
+      mode: Mode,
 }
 
 impl Default for Content {
   fn default() -> Self {
     Content {
-      mode: Mode::Text,
-      images: vec![],
-      links: vec![],
+      images:   vec![],
+      links:    vec![],
       sections: vec![Section::default()],
+      mode: Mode::Text,
     }
   }
 }

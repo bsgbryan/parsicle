@@ -1,23 +1,18 @@
-use std::error::Error;
-
 use article_scraper::ArticleScraper;
 use html2md::parse_html;
 use reqwest::Client;
 use url::Url;
 
+use crate::parse_fail::ParseFail;
+
 pub async fn execute(
   url: &Url
-) -> Result<(String, String), Box<dyn Error>> {
+) -> Result<(String, String), ParseFail> {
   let scraper = ArticleScraper::new(None);
-  let client = Client::new();
-  let article = scraper.
-    await.
-    parse(url, false, &client, None).
-    await.
-    unwrap();
-
-  Ok({
-    if let Some(html) = article.html { (article.title.unwrap(), parse_html(html.as_str())) }
-    else                             { ("".to_string(),         "".to_string())            }
-  })
+  
+  if let Ok(article) = scraper.await.parse(url, false, &Client::new(), None).await {
+    if let Some(html) = article.html { Ok((article.title.unwrap(), parse_html(html.as_str()))) }
+    else                             { Err(ParseFail) }
+  }
+  else { Err(ParseFail) }
 }

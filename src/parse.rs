@@ -10,9 +10,10 @@ extern crate comrak;
 use crate::{
   content::Content,
   fetch::execute as fetch_article,
+  parse_fail::ParseFail,
 };
 
-pub async fn parse<'a>(url: &str) -> Result<Content, Box<dyn std::error::Error>> {
+pub async fn parse<'a>(url: &str) -> Result<Content, ParseFail> {
   if let Ok  ( url       ) = Url::parse(url) &&
      let Some((title, md)) = fetch_article(&url).await.ok()
   {
@@ -26,10 +27,11 @@ pub async fn parse<'a>(url: &str) -> Result<Content, Box<dyn std::error::Error>>
         _ => ()
       }
     }
+    else { return Err(ParseFail) }
 
     println!("{content}");
   
     Ok(content)
   }
-  else { Ok(Content::default()) }
+  else { return Err(ParseFail) }
 }
