@@ -1,4 +1,4 @@
-mod pc_mag;
+pub mod pc_mag;
 
 pub const SOURCES: [&'static str; 242] = [
   "www.huffingtonpost.com",

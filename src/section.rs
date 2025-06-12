@@ -1,22 +1,33 @@
-use std::cell::RefCell;
-
-use crate::paragraph::Paragraph;
-
 #[derive(Debug, Clone)]
 pub struct Section {
-  pub content: Vec<String>,
   pub heading: String,
-  pub paragraphs: Vec<RefCell<Paragraph>>,
+  pub paragraphs: Vec<String>,
+}
+
+impl Default for Section {
+  fn default() -> Self {
+    Section {
+      heading: String::new(),
+      paragraphs: vec![],
+    }
+  }
 }
 
 impl Section {
-  pub fn new(text: &str) -> Self {
+  pub fn with_heading(text: &str) -> Self {
     Section {
-      content: vec![],
       heading: text.to_string(),
-      paragraphs: vec![RefCell::new(Paragraph {
-        tokens: vec![],
-      })],
+      paragraphs: vec![],
+    }
+  }
+
+  pub fn add_paragraph(&mut self, text: &str) {
+    self.paragraphs.push(text.to_string());
+  }
+
+  pub fn add_text(&mut self, value: &str) {
+    if let Some(p) = self.paragraphs.last_mut() {
+      *p += value;
     }
   }
 }

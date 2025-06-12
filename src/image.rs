@@ -1,16 +1,16 @@
 #[derive(Debug, Clone)]
 pub struct Image {
   pub caption: Option<String>,
-  pub title: Option<String>,
+  pub credit: Option<String>,
   pub url: String,
 }
 
 impl Image {
-  pub fn new(url: String) -> Self {
+  pub fn new(url: &str) -> Self {
     Image {
         caption: None,
-        title: None,
-        url,
+        credit: None,
+        url: url.to_string(),
     }
   }
 }

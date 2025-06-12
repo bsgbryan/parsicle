@@ -1,3 +1,5 @@
+#![feature(let_chains)]
+
 pub mod content;
 pub mod fetch;
 pub mod image;

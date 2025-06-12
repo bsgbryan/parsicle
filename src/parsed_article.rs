@@ -1,6 +1,8 @@
+use url::Url;
+
 use crate::{
+  content::Content,
   image::Image,
-  list::List,
   section::Section,
 };
 
@@ -8,7 +10,23 @@ use crate::{
 pub struct ParsedArticle {
   pub content: Vec<Section>,
   pub images: Vec<Image>,
-  pub links: Vec<String>,
-  pub lists: Vec<List>,
-  pub title: String,
+  pub links: Vec<Url>,
+}
+
+impl ParsedArticle {
+  pub fn new(content: &Content) -> Self {
+    Self {
+      content: content.sections.to_owned(),
+      images:  content.images.to_owned(),
+      links:   content.links.to_owned(),
+    }
+  }
+
+  pub fn empty() -> Self {
+    Self {
+      content: Vec::with_capacity(0),
+      images:  Vec::with_capacity(0),
+      links:   Vec::with_capacity(0),
+    }
+  }
 }
