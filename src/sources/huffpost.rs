@@ -30,12 +30,9 @@ pub fn process<'a>(html: &'a str) -> Vec<Article> {
     None => "unknown",
   };
 
-  println!("KIND: {kind}");
-
   let mut out = vec![];
 
   match kind {
-    "live-story" => {}
     "article" => {
       match Selector::parse("article.entry__content") {
         Ok(article) => {
@@ -44,20 +41,22 @@ pub fn process<'a>(html: &'a str) -> Vec<Article> {
              let Some(title)   = headline(&document)
           {
             out.push(Article {
-              authors:     authors    (&document),
-              content:     paragraphs (&article),
-              description: description(&document),
-              href,
-              images:    images   (&article),
-              published: published(&document),
+              alternate:   alternates_urls(&document),
+              authors:     authors        (&document),
+              canonical:   href,
+              content:     paragraphs  (&article),
+              description: description (&document),
+              hero_image:  hero        (&document),
+              images:      images      (&article),
+              published:   published   (&document),
               title,
             });
           }
         }
-        Err(_) => ()
+        Err(_) => eprintln!("Couldn't find article to parse")
       }
     }
-    _ => ()
+    _ => eprintln!("{kind} is an unsupported content type for the HuffPost source")
   }
 
   out
@@ -105,6 +104,40 @@ fn description(context: &Html) -> Option<String> {
       if let Some(desc) = context.select(&d).next() &&
          let Some(desc) = desc.value().attr("content")
       { Some(desc.to_string()) }
+      else { None }
+    }
+    Err(_) => None,
+  }
+}
+
+fn alternates_urls(context: &Html) -> Option<Vec<(String, Url)>> {
+  match Selector::parse("html > head > link[rel=alternate]") {
+    Ok(alt) => {
+      let mut out = vec![];
+      for a in context.select(&alt) {
+        if let Some(lang) = a.value().attr("hreflang") &&
+           let Some(href) = a.value().attr("href")     &&
+           let Ok  (url)  = Url::parse(href)
+        { out.push((lang.to_string(), url)) }
+      }
+      if out.len() > 0 { Some(out) }
+      else             { None      }
+    }
+    Err(_) => None
+  }
+}
+
+fn hero(context: &Html) -> Option<Url> {
+  match Selector::parse("html > head > meta[property=\"og:image\"]") {
+    Ok(curl) => {
+      if let Some(url) = context.select(&curl).next() &&
+         let Some(url) = url.value().attr("content")
+      {
+        match Url::parse(url) {
+          Ok(u)  => Some(u),
+          Err(_) => None,
+        }
+      }
       else { None }
     }
     Err(_) => None,

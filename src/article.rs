@@ -13,10 +13,12 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Article {
+  pub alternate:   Option<Vec<(String, Url)>>,
   pub authors:     Vec<Author>,
+  pub canonical:   Url,
   pub content:     Option<Vec<String>>,
   pub description: Option<String>,
-  pub href:        Url,
+  pub hero_image:  Option<Url>,
   pub images:      Option<Vec<Image>>,
   pub published:   Option<DateTime<Utc>>,
   pub title:       String,
@@ -30,14 +32,40 @@ impl Display for Article {
       let _ = writeln!(f, "  published: {}", published);
     }
 
-    if let Some(domain) = self.href.domain() {
+    if let Some(hero)   = &self.hero_image &&
+       let Some(domain) = hero.domain()
+    {
       let url = format!("{}://{}{}",
-        self.href.scheme(),
+        hero.scheme(),
         domain,
-        self.href.path(),
+        hero.path(),
+      );
+
+      let _ = writeln!(f, "  hero image: {}", url);
+    }
+
+    if let Some(domain) = self.canonical.domain() {
+      let url = format!("{}://{}{}",
+        self.canonical.scheme(),
+        domain,
+        self.canonical.path(),
       );
 
       let _ = writeln!(f, "  canonical url: {}", url);
+    }
+
+    if let Some(alternates) = &self.alternate {
+      for (l, a) in alternates {
+        if let Some(domain) = a.domain() {
+          let url = format!("{}://{}{}",
+            a.scheme(),
+            domain,
+            a.path(),
+          );
+  
+          let _ = writeln!(f, "  alternate url -> lang: {l}, href: {url}");
+        }
+      }
     }
     
     match &self.description {
