@@ -1,7 +1,8 @@
 #![feature(let_chains)]
 #![feature(new_range_api)]
 
-pub mod content;
+pub mod article;
+pub mod author;
 pub mod fetch;
 pub mod image;
 pub mod parse;

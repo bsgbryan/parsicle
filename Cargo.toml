@@ -9,6 +9,7 @@ repository = "https://github.com/bsgbryan/parsicle"
 
 [dependencies]
 article_scraper = "2.1.2"
+chrono = "0.4.41"
 comrak = "0.39.0"
 html2md = "0.2.15"
 reqwest = "0.12.20"

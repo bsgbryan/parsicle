@@ -1,8 +1,9 @@
-pub mod huffington_post;
-pub mod pc_mag;
+pub mod cnn;
+pub mod huffpost;
+pub mod pcmag;
 
 pub const SOURCES: [&'static str; 242] = [
-  "www.huffingtonpost.com", // Working on this one
+  "www.huffpost.com", // Working on this one
   "cnn.com",
   "www.time.com",
   "www.ted.com",
