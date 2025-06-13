@@ -1,7 +1,5 @@
 use url::Url;
 
-extern crate comrak;
-
 use crate::{
   fetch::execute as fetch_article,
   parse_fail::ParseFail,
