@@ -1,5 +1,3 @@
-#![feature(let_chains)]
-
 use parsicle::parse::parse;
 
 #[tokio::main]
