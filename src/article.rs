@@ -12,11 +12,18 @@ use crate::{
 };
 
 #[derive(Debug)]
+pub enum Content {
+  Heading(String),
+  Paragraph(String),
+  Subheading(String),
+}
+
+#[derive(Debug)]
 pub struct Article {
   pub alternate:   Option<Vec<(String, Url)>>,
   pub authors:     Vec<Author>,
   pub canonical:   Url,
-  pub content:     Option<Vec<String>>,
+  pub content:     Option<Vec<Content>>,
   pub description: Option<String>,
   pub hero_image:  Option<Url>,
   pub images:      Option<Vec<Image>>,
@@ -81,7 +88,13 @@ impl Display for Article {
 
     let _ = writeln!(f, "CONTENT:");
     if let Some(content) = &self.content {
-      for c in content { let _ = writeln!(f, "  {c}"); }
+      for c in content {
+        match c {
+          Content::Heading   (h) => { let _ = writeln!(f, "  === {} ===", h); }
+          Content::Subheading(s) => { let _ = writeln!(f, "  --- {} ---", s); }
+          Content::Paragraph (p) => { let _ = writeln!(f, "  {}",         p); }
+        }
+      }
     }
 
     Ok(())

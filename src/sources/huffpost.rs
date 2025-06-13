@@ -10,7 +10,13 @@ use scraper::{
 use url::Url;
 
 use crate::{
-  article::Article,
+  article::{
+    Article,
+    Content::{
+      Paragraph,
+      self,
+    },
+  },
   author::Author,
   image::Image,
 };
@@ -44,7 +50,7 @@ pub fn process<'a>(html: &'a str) -> Vec<Article> {
               alternate:   alternates_urls(&document),
               authors:     authors        (&document),
               canonical:   href,
-              content:     paragraphs  (&article),
+              content:     content     (&article),
               description: description (&document),
               hero_image:  hero        (&document),
               images:      images      (&article),
@@ -181,7 +187,7 @@ fn _modified(context: &Html) -> Option<DateTime<Utc>> {
   None
 }
 
-fn paragraphs(context: &ElementRef) -> Option<Vec<String>> {
+fn content(context: &ElementRef) -> Option<Vec<Content>> {
   match Selector::parse("article section.entry__content-list div.cli-text p") {
     Ok(p) => {
       let mut out = vec![];
@@ -190,7 +196,7 @@ fn paragraphs(context: &ElementRef) -> Option<Vec<String>> {
         let text = text.trim();
         let text = text.replace("  ", " ");
  
-        out.push(text);
+        out.push(Paragraph(text));
       }
       Some(out)
     }

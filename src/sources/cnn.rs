@@ -10,7 +10,14 @@ use scraper::{
 use url::Url;
 
 use crate::{
-  article::Article,
+  article::{
+    Article,
+    Content::{
+      Heading,
+      Paragraph,
+      self,
+    },
+  },
   author::Author,
   image::Image,
 };
@@ -54,7 +61,7 @@ pub fn process<'a>(html: &'a str) -> Vec<Article> {
                   alternate:   alternates_urls(&document),
                   authors:     authors        (&document),
                   canonical:   href,
-                  content:     paragraphs(&el),
+                  content:     content(&el),
                   description: None,
                   hero_image:  hero  (&document),
                   images:      images(&el),
@@ -78,7 +85,7 @@ pub fn process<'a>(html: &'a str) -> Vec<Article> {
               alternate:   alternates_urls(&document),
               authors:     authors        (&document),
               canonical:   href,
-              content:     paragraphs  (&article),
+              content:     content  (&article),
               description: description (&document),
               hero_image:  hero        (&document),
               images:      images      (&article),
@@ -215,16 +222,18 @@ fn _modified(context: &Html) -> Option<DateTime<Utc>> {
   None
 }
 
-fn paragraphs(context: &ElementRef) -> Option<Vec<String>> {
-  match Selector::parse("p.paragraph, p.pull-quote_block-quote__text") {
+fn content(context: &ElementRef) -> Option<Vec<Content>> {
+  match Selector::parse("p.paragraph, p.pull-quote_block-quote__text, h2.subheader") {
     Ok(p) => {
       let mut out = vec![];
       for p in context.select(&p) {
         let text = p.text().collect::<Vec<_>>().join(" ");
         let text = text.trim();
         let text = text.replace("  ", " ");
+        let tag  = p.value().name();
  
-        out.push(text);
+        if tag == "h2" { out.push(Heading  (text)); }
+        else           { out.push(Paragraph(text)); }
       }
       Some(out)
     }
