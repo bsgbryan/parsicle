@@ -1,11 +1,11 @@
 [package]
 authors = ["Bryan Maynard <bsgbryan@gmail.com>"]
-name = "parsicle"
-version = "25.6.13"
-edition = "2024"
 description = "A little tool for parsing articles from the web and extracting useful data from them"
+edition = "2024"
 license-file = "LICENSE"
+name = "parsicle"
 repository = "https://github.com/bsgbryan/parsicle"
+version = "25.6.13"
 
 [dependencies]
 chrono = "0.4.41"
