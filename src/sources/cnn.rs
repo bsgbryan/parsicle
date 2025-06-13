@@ -20,13 +20,13 @@ pub fn process<'a>(html: &'a str) -> Vec<Article> {
   let kind     = Selector::parse("html > head > meta[name=type]").ok();
 
   let kind = match kind {
-    Some(kind) => document.
-      select(&kind)
-      .next()
-      .unwrap()
-      .value()
-      .attr("content")
-      .unwrap(),
+    Some(kind) =>  match document.select(&kind).next() {
+      Some(kind) => match kind.value().attr("content") {
+        Some(kind) => kind,
+        None       => "unknown",
+      }
+      None => "unknown",
+    }
     None => "unknown",
   };
 
