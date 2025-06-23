@@ -14,7 +14,9 @@ use crate::{
     Article,
     Content::{
       Heading,
+      Image as ContentImage,
       Paragraph,
+      Subheading,
       self,
     },
   },
@@ -212,18 +214,8 @@ fn published(context: &Html) -> Option<DateTime<Utc>> {
   None
 }
 
-fn _modified(context: &Html) -> Option<DateTime<Utc>> {
-  let modified = Selector::parse("html > head > meta[property=\"article:modified_time\"]").ok();
-  if let Some(modified) = modified &&
-     let Some(time) = context.select(&modified).next() &&
-     let Some(time) = time.value().attr("content")
-  { return time.parse::<DateTime<Utc>>().ok() }
-
-  None
-}
-
 fn content(context: &ElementRef) -> Option<Vec<Content>> {
-  match Selector::parse("p.paragraph, p.pull-quote_block-quote__text, h2.subheader") {
+  match Selector::parse("p.paragraph, p.pull-quote_block-quote__text, h2.subheader:not(:has(+ div > table)), h3.subheader, div.image") {
     Ok(p) => {
       let mut out = vec![];
       for p in context.select(&p) {
@@ -232,8 +224,10 @@ fn content(context: &ElementRef) -> Option<Vec<Content>> {
         let text = text.replace("  ", " ");
         let tag  = p.value().name();
  
-        if tag == "h2" { out.push(Heading  (text)); }
-        else           { out.push(Paragraph(text)); }
+        if      tag == "h2"  { out.push(Heading     (text     )); }
+        else if tag == "h3"  { out.push(Subheading  (text     )); }
+        else if tag == "div" { out.push(ContentImage(image(&p))); }
+        else                 { out.push(Paragraph   (text     )); }
       }
       Some(out)
     }
@@ -243,32 +237,10 @@ fn content(context: &ElementRef) -> Option<Vec<Content>> {
 
 fn images(context: &ElementRef) -> Option<Vec<Image>> {
   match Selector::parse("div.image") {
-    Ok(image) => {
+    Ok(img) => {
       let mut out = vec![];      
-      for i in context.select(&image) {
-        let mut src    = String::new();
-        let mut alt    = String::new();
-        let mut credit = None;
-
-        if let Ok  (img) = Selector::parse("picture.image__picture > img") &&
-           let Some(img) = i.select(&img).next()                           &&
-           let Some(s)   = img.value().attr("src")                         &&
-           let Some(a)   = img.value().attr("alt")
-        {
-          src = s.to_string();
-          alt = a.to_string();
-        }
-  
-        if let Ok   (c) = Selector::parse("figcaption.image__credit") &&
-            let Some(c) = i.select(&c).next()
-        {
-          let text = c.text().collect::<Vec<_>>().join(" ");
-          credit = Some(text);
-        }
-
-        if let Some(credit) = credit &&
-           let Some(href)   = Url::parse(&src).ok()
-        { out.push(Image { href, caption: alt, credit }) }
+      for i in context.select(&img) {
+        if let Some(img) = image(&i) { out.push(img) }
       }
 
       if out.len() > 0 { Some(out) }
@@ -276,4 +248,31 @@ fn images(context: &ElementRef) -> Option<Vec<Image>> {
     }
     Err(_) => None
   }
+}
+
+fn image(context: &ElementRef) -> Option<Image> {
+  let mut src    = String::new();
+  let mut alt    = String::new();
+  let mut credit = None;
+
+  if let Ok  (img) = Selector::parse("picture.image__picture > img") &&
+     let Some(img) = context.select(&img).next()                     &&
+     let Some(s)   = img.value().attr("src")                         &&
+     let Some(a)   = img.value().attr("alt")
+  {
+    src = s.to_string();
+    alt = a.to_string();
+  }
+
+  if let Ok   (c) = Selector::parse("figcaption.image__credit") &&
+     let Some(c) = context.select(&c).next()
+  {
+    let text = c.text().collect::<Vec<_>>().join(" ");
+    credit = Some(text);
+  }
+
+  if let Some(credit) = credit &&
+     let Some(href)   = Url::parse(&src).ok()
+  { Some(Image { href, caption: alt, credit }) }
+  else { None }
 }

@@ -8,12 +8,14 @@ use url::Url;
 
 use crate::{
   author::Author,
+  href::stringify,
   image::Image,
 };
 
 #[derive(Debug)]
 pub enum Content {
   Heading(String),
+  Image(Option<Image>),
   Paragraph(String),
   Subheading(String),
 }
@@ -33,70 +35,154 @@ pub struct Article {
 
 impl Display for Article {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    let _ = writeln!(f, "ARTICLE: {}", self.title);
+    writeln!(f, "{}", self.markdown_with_frontmatter())
+  }
+}
 
-    if let Some(published) = self.published {
-      let _ = writeln!(f, "  published: {}", published);
+impl Article {
+  pub fn frontmatter(&self) -> String {
+    let mut out = String::new();
+
+    out += "---\n";
+
+    if let Some(published) = &self.published {
+      out += &format!("published: {}\n", published.to_rfc2822());
     }
 
-    if let Some(hero)   = &self.hero_image &&
-       let Some(domain) = hero.domain()
-    {
-      let url = format!("{}://{}{}",
-        hero.scheme(),
-        domain,
-        hero.path(),
-      );
-
-      let _ = writeln!(f, "  hero image: {}", url);
+    if let Some(desc) = &self.description {
+      out += &format!("summary: {desc}\n");
     }
 
-    if let Some(domain) = self.canonical.domain() {
-      let url = format!("{}://{}{}",
-        self.canonical.scheme(),
-        domain,
-        self.canonical.path(),
-      );
+    out += "authors:\n";
 
-      let _ = writeln!(f, "  canonical url: {}", url);
+    for a in &self.authors {
+      if let Some(url) = stringify(&a.href) {
+        out += &format!("  - {}: {url}\n", &a.name);
+      }
+    }
+
+    if let Some(img) = &self.hero_image {
+      out += &format!("hero: {img}\n");
+    }
+
+    if let Some(url) = stringify(&self.canonical) {
+      out += &format!("canonical_url: {url}\n");
     }
 
     if let Some(alternates) = &self.alternate {
-      for (l, a) in alternates {
-        if let Some(domain) = a.domain() {
-          let url = format!("{}://{}{}",
-            a.scheme(),
-            domain,
-            a.path(),
-          );
-  
-          let _ = writeln!(f, "  alternate url -> lang: {l}, href: {url}");
-        }
+      out += "alternate_urls:\n";
+
+      for (lang, url) in alternates {
+        out += &format!("  - {lang}: {url}\n");
       }
     }
-    
-    match &self.description {
-      Some(d) => { let _ = writeln!(f, "  description: {d}" ); }
-      None    => { let _ = writeln!(f, "  description: None"); }
-    }
 
-    for a in &self.authors { let _ = write!(f, "{a}"); }
-    
-    if let Some(images) = &self.images {
-      for i in images  { let _ = write!(f, "{i}"); }
-    }
+    out += "---\n\n";
 
-    let _ = writeln!(f, "CONTENT:");
+    out
+  }
+
+  pub fn markdown(&self) -> String {
+    let mut out = format!("# {} #\n\n", self.title);
+  
     if let Some(content) = &self.content {
       for c in content {
         match c {
-          Content::Heading   (h) => { let _ = writeln!(f, "  === {} ===", h); }
-          Content::Subheading(s) => { let _ = writeln!(f, "  --- {} ---", s); }
-          Content::Paragraph (p) => { let _ = writeln!(f, "  {}",         p); }
+          Content::Heading(h) => { out += &format!("## {h} ##\n\n")   }
+          Content::Image  (i) => {
+            if let Some(img) = i &&
+               let Some(url) = stringify(&img.href)
+            { out += &format!("![{}; credit: {}]({url})\n\n", img.caption, img.credit); }
+          }
+          Content::Subheading(s) => { out += &format!("### {s} ###\n\n") }
+          Content::Paragraph (p) => { out += &format!("{p}\n\n")         }
         }
       }
     }
 
-    Ok(())
+    out
+  }
+
+  pub fn markdown_with_frontmatter(&self) -> String {
+    format!("{}{}", &self.frontmatter(), &self.markdown())
+  }
+}
+
+impl Article {
+  pub fn html(&self) -> String {
+    let mut out = String::new();
+
+    out += "<article>\n";
+
+    if let Some(url) = stringify(&self.canonical) {
+      out += &format!("<h1>\n<a href=\"{url}\">{}</a>\n</h1>\n", &self.title);
+    }
+    else {
+      out += &format!("<h1>{}</h1>\n", &self.title);
+    }
+
+    if let Some(desc) = &self.description {
+      out += &format!("<p id=\"summary\">{desc}</p>\n");
+    }
+
+    out += "<section>\n";
+
+    if let Some(published) = &self.published {
+      out += &format!("<time id=\"published\" datetime=\"{}\">{}</time>\n",
+        &published.to_rfc3339(),
+        &published.to_rfc2822(),
+      );
+    }
+
+    out += "<ul id\"authors\">\n";
+    for a in &self.authors {
+      if let Some(url) = stringify(&a.href) {
+        out += &format!("<li>\n<a href=\"{url}\">{}</a>\n</li>\n", &a.name);
+      }
+    }
+    out += "</ul>\n";
+
+    if let Some(img) = &self.hero_image &&
+       let Some(url) = stringify(img)
+    { out += &format!("<img id=\"hero\" src=\"{}\">\n", url); }
+
+    if let Some(alternates) = &self.alternate {
+      out += "<ul class\"alternate-urls\">\n";
+      for (lang, url) in alternates {
+        out += &format!("<li>\n<a href=\"{url}\">{lang}</a>\n</li>\n");
+      }
+      out += "</ul>\n";
+    }
+
+    out += "</section>\n";
+    out += "<article id=\"content\">\n";
+
+    if let Some(content) = &self.content {
+      for c in content {
+        match c {
+          Content::Heading(h)    => { out += &format!("<h2>{h}</h2>\n") }
+          Content::Image(i) => {
+            if let Some(img) = i &&
+               let Some(url) = stringify(&img.href)
+            {
+              out += "<figure>\n";
+              out += &format!("<img src=\"{url}\" alt=\"{}\">\n", img.caption);
+              out += "<figcaption>\n";
+              out += &format!("<p>{}</p>\n", img.caption);
+              out += &format!("<i clas=\"credit\">{}</i>\n", img.credit);
+              out += "</figcaption>\n";
+              out += "</figure>\n";
+            }
+          }
+          Content::Subheading(s) => { out += &format!("<h3>{s}</h3>\n") }
+          Content::Paragraph(p)  => { out += &format!("<p>{p}</p>\n")   }
+        }
+      }
+    }
+
+    out += "</article>\n";
+    out += "</article>\n";
+
+    out
   }
 }
