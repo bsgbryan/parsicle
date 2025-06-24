@@ -1,7 +1,9 @@
 use url::Url;
 
-pub fn stringify(url: &Url) -> Option<String> {
-  if let Some(domain) = url.domain() {
+pub fn sanitize(url: &str) -> Option<String> {
+  if let Ok   (url)   = Url::parse(url) &&
+     let Some(domain) = url.domain()
+  {
     return Some(format!("{}://{}{}",
       url.scheme(),
       domain,

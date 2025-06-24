@@ -67,7 +67,7 @@ fn authors(context: &Html) -> Vec<Author> {
           match Url::parse(&format!("https://www.pcmag.com{}", href)) {
             Ok(href) => {
               if let Some(name) = el.value().attr("aria-label") {
-                out.push(Author { href, name: name.to_string() });
+                out.push(Author::new(name, href.as_str()));
               }
             }
             Err(e) => eprintln!("{e:?}")
@@ -135,14 +135,14 @@ fn images(context: &ElementRef) -> Option<Vec<Image>> {
             }
       
             if let Ok  (c) = Selector::parse("small")                                         &&
-                let Some(c) = i.select(&c).next()                                              &&
-                let Some(t) = c.text().collect::<Vec<_>>().join(" ").strip_prefix("(Credit: ") &&
-                let Some(t) = t.strip_suffix(")")
+               let Some(c) = i.select(&c).next()                                              &&
+               let Some(t) = c.text().collect::<Vec<_>>().join(" ").strip_prefix("(Credit: ") &&
+               let Some(t) = t.strip_suffix(")")
             { credit = Some(t.to_string()); }
   
-            if let Some(credit) = credit &&
-                let Some(href)   = Url::parse(&src).ok()
-            { out.push(Image { href, caption: alt, credit }) }
+            if let Some(credit) = credit {
+              out.push(Image::new(&alt, &credit, &src));
+            }
           }
         }
       }

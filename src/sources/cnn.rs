@@ -126,13 +126,8 @@ fn authors(context: &Html) -> Vec<Author> {
     Ok(byline) => {
       for el in context.select(&byline) {
         if let Some(href) = el.value().attr("href") {
-          match Url::parse(href) {
-            Ok(href) => {
-              let name = el.text().collect::<Vec<_>>().join(" ");
-              out.push(Author { href, name });
-            }
-            Err(_) => ()
-          }
+          let name = el.text().collect::<Vec<_>>().join(" ");
+          out.push(Author::new(&name, href));
         }
       }
     }
@@ -264,15 +259,15 @@ fn image(context: &ElementRef) -> Option<Image> {
     alt = a.to_string();
   }
 
-  if let Ok   (c) = Selector::parse("figcaption.image__credit") &&
+  if let Ok  (c) = Selector::parse("figcaption.image__credit") &&
      let Some(c) = context.select(&c).next()
   {
     let text = c.text().collect::<Vec<_>>().join(" ");
     credit = Some(text);
   }
 
-  if let Some(credit) = credit &&
-     let Some(href)   = Url::parse(&src).ok()
-  { Some(Image { href, caption: alt, credit }) }
+  if let Some(credit) = credit {
+    Some(Image::new(&alt, &credit, &src))
+  }
   else { None }
 }

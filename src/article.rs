@@ -8,7 +8,7 @@ use url::Url;
 
 use crate::{
   author::Author,
-  href::stringify,
+  href::sanitize,
   image::Image,
 };
 
@@ -56,7 +56,7 @@ impl Article {
     out += "authors:\n";
 
     for a in &self.authors {
-      if let Some(url) = stringify(&a.href) {
+      if let Some(url) = &a.href {
         out += &format!("  - {}: {url}\n", &a.name);
       }
     }
@@ -65,7 +65,7 @@ impl Article {
       out += &format!("hero: {img}\n");
     }
 
-    if let Some(url) = stringify(&self.canonical) {
+    if let Some(url) = sanitize(&self.canonical.as_str()) {
       out += &format!("canonical_url: {url}\n");
     }
 
@@ -91,7 +91,7 @@ impl Article {
           Content::Heading(h) => { out += &format!("## {h} ##\n\n")   }
           Content::Image  (i) => {
             if let Some(img) = i &&
-               let Some(url) = stringify(&img.href)
+               let Some(url) = &img.href
             { out += &format!("![{}; credit: {}]({url})\n\n", img.caption, img.credit); }
           }
           Content::Subheading(s) => { out += &format!("### {s} ###\n\n") }
@@ -114,7 +114,7 @@ impl Article {
 
     out += "<article>\n";
 
-    if let Some(url) = stringify(&self.canonical) {
+    if let Some(url) = sanitize(&self.canonical.as_str()) {
       out += &format!("<h1>\n<a href=\"{url}\">{}</a>\n</h1>\n", &self.title);
     }
     else {
@@ -136,14 +136,14 @@ impl Article {
 
     out += "<ul id\"authors\">\n";
     for a in &self.authors {
-      if let Some(url) = stringify(&a.href) {
+      if let Some(url) = &a.href {
         out += &format!("<li>\n<a href=\"{url}\">{}</a>\n</li>\n", &a.name);
       }
     }
     out += "</ul>\n";
 
     if let Some(img) = &self.hero_image &&
-       let Some(url) = stringify(img)
+       let Some(url) = sanitize(img.as_str())
     { out += &format!("<img id=\"hero\" src=\"{}\">\n", url); }
 
     if let Some(alternates) = &self.alternate {
@@ -163,7 +163,7 @@ impl Article {
           Content::Heading(h)    => { out += &format!("<h2>{h}</h2>\n") }
           Content::Image(i) => {
             if let Some(img) = i &&
-               let Some(url) = stringify(&img.href)
+               let Some(url) = &img.href
             {
               out += "<figure>\n";
               out += &format!("<img src=\"{url}\" alt=\"{}\">\n", img.caption);
