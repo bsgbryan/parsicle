@@ -7,18 +7,18 @@ use postgres_types::{
 
 use crate::href::sanitize;
 
-#[derive(Debug, ToSql, FromSql)]
+#[derive(Clone, Debug, ToSql, FromSql)]
 #[postgres(name = "author")]
 pub struct Author {
   pub href: Option<String>,
-  pub name: String,
+  pub full_name: String,
 }
 
 impl Author {
   pub fn new(name: &str, href: &str) -> Self {
     Self {
       href: sanitize(href),
-      name: name.to_owned(),
+      full_name: name.to_owned(),
     }
   }
 }
@@ -26,7 +26,7 @@ impl Author {
 impl Display for Author {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     if let Some(url) = &self.href {
-      writeln!(f, "AUTHOR -> {}: {url}", self.name).ok();
+      writeln!(f, "AUTHOR -> {}: {url}", self.full_name).ok();
     }
 
     Ok(())

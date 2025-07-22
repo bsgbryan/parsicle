@@ -12,7 +12,7 @@ use crate::href::sanitize;
 pub struct Image {
   pub href:    Option<String>,
   pub caption: String,
-  pub credit:  String,
+  pub credit:  Vec<String>,
 }
 
 impl Image {
@@ -20,7 +20,10 @@ impl Image {
     Self {
       href: sanitize(href),
       caption: caption.to_owned(),
-      credit: credit.to_owned(),
+      credit: credit
+      	.split("/")
+       	.map(|c| c.trim().to_owned())
+        .collect::<Vec<String>>(),
     }
   }
 }
@@ -33,7 +36,7 @@ impl Display for Image {
       writeln!(f, "  href: {}", url).ok();
     }
 
-    writeln!(f, "  credit: {}",  self.credit).ok();
+    writeln!(f, "  credit: {}",  self.credit.join("/")).ok();
     writeln!(f, "  caption: {}", self.caption).ok();
 
     Ok(())

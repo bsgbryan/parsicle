@@ -12,7 +12,7 @@ use crate::{
   image::Image,
 };
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Content {
   Heading(String),
   Image(Option<Image>),
@@ -20,7 +20,7 @@ pub enum Content {
   Subheading(String),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Article {
   pub alternate:   Option<Vec<(String, Url)>>,
   pub authors:     Vec<Author>,
@@ -57,7 +57,7 @@ impl Article {
 
     for a in &self.authors {
       if let Some(url) = &a.href {
-        out += &format!("  - {}: {url}\n", &a.name);
+        out += &format!("  - {}: {url}\n", &a.full_name);
       }
     }
 
@@ -92,7 +92,7 @@ impl Article {
           Content::Image  (i) => {
             if let Some(img) = i &&
                let Some(url) = &img.href
-            { out += &format!("![{}; credit: {}]({url})\n\n", img.caption, img.credit); }
+            { out += &format!("![{}; credit: {}]({url})\n\n", img.caption, img.credit.join("/")); }
           }
           Content::Subheading(s) => { out += &format!("### {s} ###\n\n") }
           Content::Paragraph (p) => { out += &format!("{p}\n\n")         }
@@ -137,7 +137,7 @@ impl Article {
     out += "<ul id\"authors\">\n";
     for a in &self.authors {
       if let Some(url) = &a.href {
-        out += &format!("<li>\n<a href=\"{url}\">{}</a>\n</li>\n", &a.name);
+        out += &format!("<li>\n<a href=\"{url}\">{}</a>\n</li>\n", &a.full_name);
       }
     }
     out += "</ul>\n";
@@ -169,7 +169,7 @@ impl Article {
               out += &format!("<img src=\"{url}\" alt=\"{}\">\n", img.caption);
               out += "<figcaption>\n";
               out += &format!("<p>{}</p>\n", img.caption);
-              out += &format!("<i clas=\"credit\">{}</i>\n", img.credit);
+              out += &format!("<i clas=\"credit\">{}</i>\n", img.credit.join("/"));
               out += "</figcaption>\n";
               out += "</figure>\n";
             }
