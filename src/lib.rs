@@ -1,4 +1,3 @@
-#![feature(let_chains)]
 #![feature(new_range_api)]
 
 #[macro_use]
