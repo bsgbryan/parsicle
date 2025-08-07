@@ -44,12 +44,16 @@ pub fn process<'a>(html: &'a str) -> Vec<Article> {
         }
       }
       else {
+      	#[cfg(debug_assertions)]
         eprintln!("No canonical url found");
+
         Vec::with_capacity(0)
       }
     }
     _ => {
+    	#[cfg(debug_assertions)]
       eprintln!("{kind} is an unsupported content type for the PCMAG source");
+
       Vec::with_capacity(0)
     }
   }

@@ -21,7 +21,9 @@ pub async fn parse<'a>(url: &str) -> Vec<Article> {
         "www.huffpost.com" => huffpost::process(&html),
         "www.pcmag.com"    =>    pcmag::process(&html),
         _ => {
+        	#[cfg(debug_assertions)]
           eprintln!("{domain} is not currently supported");
+
           Vec::with_capacity(0)
         }
       };

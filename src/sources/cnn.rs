@@ -96,10 +96,16 @@ pub fn process<'a>(html: &'a str) -> Vec<Article> {
             });
           }
         }
-        Err(_) => eprintln!("Couldn't find article to parse")
+        Err(_) => {
+	        #[cfg(debug_assertions)]
+	        eprintln!("Couldn't find article to parse")
+        }
       }
     }
-    _ => eprintln!("{kind} is an unsupported content type for the CNN source")
+    _ => {
+    	#[cfg(debug_assertions)]
+	    eprintln!("{kind} is an unsupported content type for the CNN source")
+    }
   }
 
   out
